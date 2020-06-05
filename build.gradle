@@ -1,0 +1,54 @@
+plugins {
+    id 'java'
+}
+
+group 'org.example'
+version '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+ext {
+    bouncycastleVersion = '1.61'
+    commonsCodecVersion = '1.13'
+    jargon2Version = '1.1.1'
+    guavaVersion = '28.1-jre'
+    lombokVersion = '1.18.10'
+    jacksonVersion = '2.10.0'
+    commonsCliVersion = '1.4'
+    gRPCVersion = '1.25.0'
+    webSocketVersion = '1.4.0'
+    math3Version = '3.6'
+    cedarsoftwareVersion = '1.8.0'
+    scastleVersion = '1.58.0.0'
+    rocksdbVersion = '5.9.2'
+    leveldbVersion = '0.12'
+    leveldbJNIVersion = '1.18.3'
+    commonsCollections4Version = '4.0'
+    commonsLang3Version = '3.4'
+    nettySocketIOVersion = '1.7.12'
+    rlpVersion = '1.1.20'
+    lotusvmVersion = '0.0.11'
+    springShellVersion = '2.0.0.RELEASE'
+    slf4jVersion = '1.7.28'
+    fastjsonVersion = "1.2.62"
+}
+
+
+dependencies {
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+    compile fileTree(dir:'lib', includes: ['*.jar'])
+
+    compile "commons-codec:commons-codec:${commonsCodecVersion}"
+    compile "com.fasterxml.jackson.core:jackson-databind:${jacksonVersion}"
+    compile "com.google.guava:guava:${guavaVersion}"
+    compile "org.bouncycastle:bcprov-jdk15on:${bouncycastleVersion}"
+    compile "com.alibaba:fastjson:${fastjsonVersion}"
+    compileOnly "org.projectlombok:lombok:${lombokVersion}"
+    annotationProcessor "org.projectlombok:lombok:${lombokVersion}"
+}
+
+tasks.withType(JavaCompile) {
+    options.encoding = "UTF-8"
+}
