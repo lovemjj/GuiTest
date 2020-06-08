@@ -12,6 +12,8 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 import lombok.SneakyThrows;
 import org.tdf.common.util.HexBytes;
 import org.tdf.crypto.CryptoHelpers;
+import org.tdf.crypto.keystore.KeyStoreImpl;
+import org.tdf.crypto.keystore.SMKeystore;
 import org.tdf.crypto.sm2.SM2;
 import org.tdf.crypto.sm2.SM2PrivateKey;
 import org.tdf.crypto.sm2.SM2PublicKey;
@@ -37,18 +39,21 @@ public class ScrectKeyStore extends JFrame implements ActionListener{
     }
 
     private static final long serialVersionUID = -1189035634361220261L;
+    String pwd;
+    KeyStoreImpl k;
     JFrame mainframe;
     JTabbedPane tabbedPane = new JTabbedPane();
     ImageIcon icon = createImageIcon();
     JPanel panel_for_create_secret_store;
     JPanel panel_for_create_key_store;
-    JComponent panel1;
     //创建相关的Label标签
     JLabel pubkey_label = new JLabel("pubkey:");
-    JLabel plain_label = new JLabel("plain:");
+    JLabel password_label = new JLabel("password:");
+    JLabel private_key_label = new JLabel("skkey:");
     //创建相关的文本域
     JTextField pubkey_textfield = new JTextField(20);
-    JTextField plain_textfield = new JTextField(20);
+    JTextField password_textfield = new JTextField(20);
+    JTextField private_key_textfield = new JTextField(20);
     //创建按钮
     JButton start_button_for_create_secret_store = new JButton("CREATE SECRET STORE");
     JButton start_button_for_create_key_store = new JButton("CREATE KEY STORE");
@@ -69,27 +74,28 @@ public class ScrectKeyStore extends JFrame implements ActionListener{
         //窗体居中，c是Component类的父窗口
         //mainframe.setLocationRelativeTo(c);
         initPanel();//初始化面板
-        panel_for_create_key_store = makeTextPanel("");
-        tabbedPane.addTab("create key store", icon, panel_for_create_key_store,"Does nothing at all");
-        tabbedPane.addTab("create secret store", icon, panel_for_create_secret_store,"Does nothing at all");
+        panel_for_create_key_store = makeTextPanel();
+        tabbedPane.addTab("create key store", icon, panel_for_create_key_store,"create key store");
+        tabbedPane.addTab("create secret store", icon, panel_for_create_secret_store,"create secret store");
         mainframe.add(this.tabbedPane, BorderLayout.CENTER);
-        //mainframe.add(panel_for_create_secret_store);
         mainframe.setVisible(true);
     }
 
-    protected JPanel makeTextPanel(String text) {
+    protected JPanel makeTextPanel() {
         JPanel panel  = new JPanel();
-        JLabel label = new JLabel(text);
-        label.setBounds(10,20,80,25);
-        JTextField textfield = new JTextField(20);
-        textfield.setBounds(100,20,400,25);
-        panel.add(label);
-        panel.add(textfield);
-        JButton button = new JButton("生成secret");
-        button.setBounds(220,120,120,25);
-        panel.add(button);
+        panel.setLayout(null);
+        password_label.setBounds(10,20,80,25);
+        password_textfield.setBounds(100,20,400,25);
+        panel.add(password_label);
+        panel.add(password_textfield);
+        private_key_label.setBounds(10,50,80,25);
+        private_key_textfield.setBounds(100,50,400,25);
+        panel.add(private_key_label);
+        panel.add(private_key_textfield);
+        start_button_for_create_key_store.setBounds(180,120,220,25);
+        panel.add(start_button_for_create_key_store);
         //增加动作监听
-        button.addActionListener(this);
+        start_button_for_create_key_store.addActionListener(this);
         return panel;
     }
 
@@ -106,12 +112,7 @@ public class ScrectKeyStore extends JFrame implements ActionListener{
         this.panel_for_create_secret_store.add(pubkey_label);
         this.panel_for_create_secret_store.add(pubkey_textfield);
 
-        plain_label.setBounds(10,50,80,25);
-        plain_textfield.setBounds(100,50,400,25);
-        this.panel_for_create_secret_store.add(plain_label);
-        this.panel_for_create_secret_store.add(plain_textfield);
-
-        start_button_for_create_secret_store.setBounds(220,120,120,25);
+        start_button_for_create_secret_store.setBounds(180,70,220,25);
         this.panel_for_create_secret_store.add(start_button_for_create_secret_store);
         //增加动作监听
         start_button_for_create_secret_store.addActionListener(this);
@@ -122,25 +123,40 @@ public class ScrectKeyStore extends JFrame implements ActionListener{
     public void actionPerformed(ActionEvent event) {
         if(event.getSource() == start_button_for_create_secret_store)
         {
-            // String pubkeyStr = pubkey_textfield.getText();
-            // String plainStr = plain_textfield.getText();
-            String pubkeyStr = "03cac34009c85674f46f0801d195a216030807f6aa2be337e754ae7645bf7a1106";
-            String plainStr ="f00df601a78147ffe0b84de1dffbebed2a6ea965becd5d0bd7faf54f1f29c6b5";
+            String pubkeyStr = pubkey_textfield.getText();
+//            pubkeyStr = "03cac34009c85674f46f0801d195a216030807f6aa2be337e754ae7645bf7a1106";
             System.out.println(pubkeyStr);
-            System.out.println(plainStr);
             byte[] aliceSk = CryptoContext.generateSecretKey();
             byte[] alicePk = CryptoContext.getPkFromSk(aliceSk);
             byte[] bobPk = HexBytes.decode(pubkeyStr);
             byte[] key = CryptoContext.ecdh(true, aliceSk, bobPk);
-            byte[] plain = HexBytes.decode(plainStr);
+            byte[] plain = SMKeystore.decryptKeyStore(k, pwd);
             byte[] cipher = CryptoContext.encrypt(key, plain);
             SecretStoreImpl s = new SecretStoreImpl(
                     HexBytes.fromBytes(alicePk),
                     HexBytes.fromBytes(cipher)
             );
-            try(FileWriter file = new FileWriter("my.jsonc"))
+            try(FileWriter file = new FileWriter("secret_store.jsonc"))
             {
                 file.write(MappingUtil.OBJECT_MAPPER.writeValueAsString(s));
+                file.flush();
+            }
+            catch (IOException e)
+            {
+                e.printStackTrace();
+            }
+        }
+        else if(event.getSource() == start_button_for_create_key_store)
+        {
+            pwd = password_textfield.getText();
+            String sk = private_key_textfield.getText();
+            System.out.println(pwd);
+            System.out.println(sk);
+            byte[] privateKey = sk.getBytes();
+            k = SMKeystore.generateKeyStore(pwd, privateKey);
+            try(FileWriter file = new FileWriter("key_store.jsonc"))
+            {
+                file.write(MappingUtil.OBJECT_MAPPER.writeValueAsString(k));
                 file.flush();
             }
             catch (IOException e)
@@ -217,6 +233,33 @@ public class ScrectKeyStore extends JFrame implements ActionListener{
                 System.err.println("IO异常");
                 e.printStackTrace();
             }
+        }
+    }
+
+     /**
+     * 读取json文件，返回json串
+     * @param fileName
+     * @return
+     */
+    public static String readJsonFile(String fileName) {
+        String jsonStr = "";
+        try {
+            File jsonFile = new File(fileName);
+            FileReader fileReader = new FileReader(jsonFile);
+
+            Reader reader = new InputStreamReader(new FileInputStream(jsonFile),"utf-8");
+            int ch = 0;
+            StringBuffer sb = new StringBuffer();
+            while ((ch = reader.read()) != -1) {
+                sb.append((char) ch);
+            }
+            fileReader.close();
+            reader.close();
+            jsonStr = sb.toString();
+            return jsonStr;
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
         }
     }
 
