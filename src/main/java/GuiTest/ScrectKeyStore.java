@@ -191,17 +191,12 @@ public class ScrectKeyStore extends JFrame implements ActionListener{
             //假如用户填写的文件名不带我们制定的后缀名，那么我们给它添上后缀
             if (!fname.endsWith(".jsonc")) {
                 file = new File(chooser.getCurrentDirectory(), fname + ".jsonc");
-                System.out.println("renamed");
-                System.out.println(file.getName());
             }
 
             try {
                 BufferedWriter bufw = new BufferedWriter(new FileWriter(file));
-
                 bufw.write(text);
-
                 bufw.close();
-
             } catch (IOException e) {
                 System.err.println("IO异常");
                 e.printStackTrace();
