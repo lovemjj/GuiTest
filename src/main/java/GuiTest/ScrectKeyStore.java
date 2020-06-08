@@ -3,7 +3,6 @@ package GuiTest;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.WindowEvent;
 import java.io.*;
 
 import javax.swing.*;
@@ -124,8 +123,10 @@ public class ScrectKeyStore extends JFrame implements ActionListener{
         if(event.getSource() == start_button_for_create_secret_store)
         {
             String pubkeyStr = pubkey_textfield.getText();
-//            pubkeyStr = "03cac34009c85674f46f0801d195a216030807f6aa2be337e754ae7645bf7a1106";
-            System.out.println(pubkeyStr);
+            if(pubkeyStr == null || pubkeyStr.isEmpty())
+            {
+                JOptionPane.showMessageDialog(null, "pubkey is null");
+            }
             byte[] aliceSk = CryptoContext.generateSecretKey();
             byte[] alicePk = CryptoContext.getPkFromSk(aliceSk);
             byte[] bobPk = HexBytes.decode(pubkeyStr);
@@ -136,42 +137,28 @@ public class ScrectKeyStore extends JFrame implements ActionListener{
                     HexBytes.fromBytes(alicePk),
                     HexBytes.fromBytes(cipher)
             );
-            try(FileWriter file = new FileWriter("secret_store.jsonc"))
-            {
-                file.write(MappingUtil.OBJECT_MAPPER.writeValueAsString(s));
-                file.flush();
-            }
-            catch (IOException e)
-            {
-                e.printStackTrace();
-            }
+            String text = MappingUtil.OBJECT_MAPPER.writeValueAsString(s);
+            saveFile(text);
         }
         else if(event.getSource() == start_button_for_create_key_store)
         {
             pwd = password_textfield.getText();
             String sk = private_key_textfield.getText();
-            System.out.println(pwd);
-            System.out.println(sk);
+            if(pwd == null || pwd.isEmpty())
+            {
+                JOptionPane.showMessageDialog(null, "pwd is null");
+                return;
+            }
+            if(sk == null || sk.isEmpty())
+            {
+                JOptionPane.showMessageDialog(null, "private key is null");
+                return;
+            }
             byte[] privateKey = sk.getBytes();
             k = SMKeystore.generateKeyStore(pwd, privateKey);
-            try(FileWriter file = new FileWriter("key_store.jsonc"))
-            {
-                file.write(MappingUtil.OBJECT_MAPPER.writeValueAsString(k));
-                file.flush();
-            }
-            catch (IOException e)
-            {
-                e.printStackTrace();
-            }
+            String text = MappingUtil.OBJECT_MAPPER.writeValueAsString(k);
+            saveFile(text);
         }
-    }
-
-    public void windowClosed(WindowEvent arg0) {
-        System.exit(0);
-    }
-
-    public void windowClosing(WindowEvent arg0) {
-        System.exit(0);
     }
 
     protected static ImageIcon createImageIcon() {
@@ -185,27 +172,13 @@ public class ScrectKeyStore extends JFrame implements ActionListener{
         }
     }
 
-    public static String getFileContents(String fileName) throws Exception {
-        File theFile = new File(fileName);
-        byte[] bytes = new byte[(int) theFile.length()];
-        InputStream in = new FileInputStream(theFile);
-        int m = 0, n = 0;
-        while (m < bytes.length) {
-            n = in.read(bytes, m, bytes.length - m);
-            m += n;
-        }
-
-        in.close();
-        return new String(bytes);
-    }
-
-    public void saveFile() {
+    public void saveFile(String text) {
         //弹出文件选择框
         JFileChooser chooser = new JFileChooser();
 
         //后缀名过滤器
         FileNameExtensionFilter filter = new FileNameExtensionFilter(
-                "通讯录文件(*.con)", "con");
+                "保存文件(*.jsonc)", "jsonc");
         chooser.setFileFilter(filter);
 
         //下面的方法将阻塞，直到【用户按下保存按钮且“文件名”文本框不为空】或【用户按下取消按钮】
@@ -216,50 +189,23 @@ public class ScrectKeyStore extends JFrame implements ActionListener{
             String fname = chooser.getName(file);    //从文件名输入框中获取文件名
 
             //假如用户填写的文件名不带我们制定的后缀名，那么我们给它添上后缀
-            if (!fname.endsWith(".con")) {
-                file = new File(chooser.getCurrentDirectory(), fname + ".con");
+            if (!fname.endsWith(".jsonc")) {
+                file = new File(chooser.getCurrentDirectory(), fname + ".jsonc");
                 System.out.println("renamed");
                 System.out.println(file.getName());
             }
 
             try {
-                FileOutputStream fos = new FileOutputStream(file);
+                BufferedWriter bufw = new BufferedWriter(new FileWriter(file));
 
-                //写文件操作……
+                bufw.write(text);
 
-                fos.close();
+                bufw.close();
 
             } catch (IOException e) {
                 System.err.println("IO异常");
                 e.printStackTrace();
             }
-        }
-    }
-
-     /**
-     * 读取json文件，返回json串
-     * @param fileName
-     * @return
-     */
-    public static String readJsonFile(String fileName) {
-        String jsonStr = "";
-        try {
-            File jsonFile = new File(fileName);
-            FileReader fileReader = new FileReader(jsonFile);
-
-            Reader reader = new InputStreamReader(new FileInputStream(jsonFile),"utf-8");
-            int ch = 0;
-            StringBuffer sb = new StringBuffer();
-            while ((ch = reader.read()) != -1) {
-                sb.append((char) ch);
-            }
-            fileReader.close();
-            reader.close();
-            jsonStr = sb.toString();
-            return jsonStr;
-        } catch (IOException e) {
-            e.printStackTrace();
-            return null;
         }
     }
 
